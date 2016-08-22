@@ -18,6 +18,10 @@
   },
   "homepage": "https://github.com/LarryStanley/food-bot#readme",
   "dependencies": {
+    "crypto": "0.0.3",
+    "dotenv": "^2.0.0",
+    "node-wit": "^4.1.0",
+    "request": "^2.74.0",
     "restify": "^4.1.1"
   }
 }
