@@ -1,14 +1,7 @@
 var restify = require('restify');
+fs = require =('fs');
 
-function respond(req, res, next) {
-  res.send('hello ' + req.params.name);
-  next();
-}
-
-var server = restify.createServer();
-server.get('/hello/:name', respond);
-server.head('/hello/:name', respond);
-
-server.listen(8080, function() {
-  console.log('%s listening at %s', server.name, server.url);
+var server = restify.createServer({
+	certificate: fs.readFileSync('/home/stanley/bot.ncufood.info/bot.ncufood.info.crt'),
+	key: fs.readFileSync('/home/stanley/bot.ncufood.info/ca.key'),
 });
