@@ -2,6 +2,7 @@ var request = require('request');
 var restify = require('restify');
 var crypto = require('crypto');
 var fetch = require('node-fetch');
+var _ = require('underscore');
 fs = require('fs');
 require('dotenv').config();
 
@@ -20,7 +21,7 @@ var server = restify.createServer({
 	ca: fs.readFileSync('/home/stanley/bot.ncufood.info/bot.ncufood.info.ca-bundle'),
 	cert: fs.readFileSync('/home/stanley/bot.ncufood.info/bot.ncufood.info.crt'),
 	name: "food-bot",
-	passphrase: "ksNjf9hCA7"
+	passphrase: process.env.PASSPHARSE
 });
 server.use(restify.queryParser());
 server.use(restify.bodyParser());
@@ -110,6 +111,20 @@ const actions = {
 			console.error('Oops! Couldn\'t find user for session:', sessionId);
 			return Promise.resolve()
 		}
+	},sendGreetings({context, entities}) {
+		return new Promise(function(resolve, reject) {
+				var results = [
+						"您好，我是中大美食機器人\n 我不叫Siri，很高興為您服務",
+						"安安，你好",
+						"您好，我是中大美食機器人",
+						"安安，給虧嗎？",
+						"您好，請問有什麼可以為您服務的嗎？",
+						"請問需要什麼服務嗎？",
+						"你好！！很高興問您服務"
+					]
+		        context.greeting = _.sample(results);
+			return resolve(context);
+	    });
 	},
 };
 
