@@ -298,7 +298,7 @@ const actions = {
 
 									generics = true;
 									context.elements = [];
-									if (result.comments.length) {
+									if (result.comments) {
 										_.each(result.comments.reverse(), function(comment) {
 											context.elements.push({
 												"subtitle": comment.comment,
@@ -312,6 +312,8 @@ const actions = {
 										});
 									} else {
 										context.noRate = true;
+										generics = false;
+										delete context.elements;
 									}
 								});
 								delete context.missingRestaurantName;
