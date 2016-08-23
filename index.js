@@ -2,8 +2,13 @@ var request = require('request');
 var restify = require('restify');
 var crypto = require('crypto');
 var fetch = require('node-fetch');
+var htmlparser = require("htmlparser2");
+var stringSimilarity = require('string-similarity');
+var moment = require('moment');
 var _ = require('underscore');
+
 fs = require('fs');
+
 require('dotenv').config();
 
 try {
@@ -23,6 +28,8 @@ var server = restify.createServer({
 	name: "food-bot",
 	passphrase: process.env.PASSPHARSE
 });
+var generic = false;
+var generics = false;
 server.use(restify.queryParser());
 server.use(restify.bodyParser());
 
@@ -54,14 +61,13 @@ server.post('/webhook/', function (req, res) {
 				text, // the user's message
 				sessions[sessionId].context // the user's current session state
 			).then((context) => {
-				console.log('Waiting for next user messages');
 				sessions[sessionId].context = context;
 			}).catch((err) => {
 				console.error('Oops! Got an error from Wit: ', err.stack || err);
 			})
 		}
 	}
-	res.send(200);
+	res.send(200, "success");
 });
 
 const sessions = {};
@@ -97,16 +103,46 @@ const actions = {
 		const {text, quickreplies} = response;
 		const recipientId = sessions[sessionId].fbid;
 		if (recipientId) {
-			return sendTextMessage(recipientId, text)
-			.then(() => null)
-			.catch((err) => {
-				console.error(
-					'Oops! An error occurred while forwarding the response to',
-					recipientId,
-					':',
-					err.stack || err
-					);
-			});
+			if (generic) {
+				return sendGenericMessage(recipientId, context.url, context.title, context.subtitle)
+				.then(() => {
+					generic = false;
+				})
+				.catch((err) => {
+					console.error(
+						'Oops! An error occurred while forwarding the response to',
+						recipientId,
+						':',
+						err.stack || err
+						);
+				});
+			} else if(generics) {
+				return sendMultiGenericMessage(recipientId, context.elements)
+				.then(() => {
+					generics = false;
+				})
+				.catch((err) => {
+					console.error(
+						'Oops! An error occurred while forwarding the response to',
+						recipientId,
+						':',
+						err.stack || err
+						);
+				});
+			} else {
+				return sendTextMessage(recipientId, text)
+				.then(() => {
+					return Promise.resolve();
+				})
+				.catch((err) => {
+					console.error(
+						'Oops! An error occurred while forwarding the response to',
+						recipientId,
+						':',
+						err.stack || err
+						);
+				});
+			}
 		} else {
 			console.error('Oops! Couldn\'t find user for session:', sessionId);
 			return Promise.resolve()
@@ -114,7 +150,7 @@ const actions = {
 	},sendGreetings({context, entities}) {
 		return new Promise(function(resolve, reject) {
 				var results = [
-						"您好，我是中大美食機器人 Abgal\n 我不叫Siri，很高興為您服務",
+						"您好，我不叫Siri，很高興為您服務",
 						"安安，你好",
 						"您好，我是中大美食機器人",
 						"安安，給虧嗎？",
@@ -127,11 +163,170 @@ const actions = {
 	    });
 	},getMenu({context, entities}) {
 		return new Promise(function(resolve, reject) {
-				
-		        context.restaurant_url = "http://www.ncufood.info/" + firstEntityValue(entities, 'restaurant_name');
+				var allName = [];
+				request('http://www.ncufood.info/api/all_name', function (error, response, body) {
+					const entityRestaurantName = firstEntityValue(entities, 'restaurant_name');
+
+					if (entityRestaurantName) {
+						var finalName;
+						if (!error && response.statusCode == 200) {
+							_.each(JSON.parse(body), function(value) {
+								if (stringSimilarity.compareTwoStrings(value, entityRestaurantName) > 0) {
+									finalName = value;
+									return false;
+								}
+							});
+
+							if (finalName) {
+								context.restaurant_name = finalName;
+						        context.restaurant_url = "http://www.ncufood.info/" + finalName;
+								context.restaurant_url = encodeURI(context.restaurant_url);
+								context.title = finalName;
+						        context.url = "http://www.ncufood.info/" + finalName;
+								context.url = encodeURI(context.url);
+
+								request(encodeURI("http://www.ncufood.info/api/" + finalName), function(error, response, body) {
+									context.subtitle = JSON.parse(body).address;
+								});
+								generic = true;
+								delete context.missingRestaurantName;
+							} else {
+								context.missingRestaurantName = true;
+								delete context.restaurant_url;
+							}
+						}
+					} else {
+						context.missingRestaurantName = true;
+						delete context.restaurant_url;
+					}
+				});
 			return resolve(context);
 	    });
-	}
+	},getWeather({context, entities}) {
+		return new Promise(function(resolve, reject) {
+			request('http://api.openweathermap.org/data/2.5/weather?lat=24.968129&lon=121.192645&units=metric&APPID=' + process.env.WEATHER_KEY, function(error, response, body) {
+				var result = JSON.parse(body);
+				context.temperature =  "\n" + result.main.temp + " 度";
+				return resolve(context);
+			});
+	    });
+	}, getBusTime({context, entities}) {
+		return new Promise(function(resolve, reject) {
+			const entitiesBusStop = firstEntityValue(entities, 'bus_stop');
+			const entitiesBusRoute = firstEntityValue(entities, 'bus_route');
+			if (entitiesBusRoute)
+				context.bus_route = entitiesBusRoute;
+			if (entitiesBusStop)
+				context.bus_stop = entitiesBusStop;
+
+			if (!entitiesBusStop) {
+				context.missingStop = true;
+				delete context.bus_time;
+			} else if(!entitiesBusRoute) {
+				context.missingRoute = true;
+				delete context.bus_time;
+			} 
+
+			if (context.bus_stop && context.bus_route){
+				const busList = ["133", "132", "172", "132_A"];
+				const busIdList = {
+					"133": "133",
+					"132": "3220",
+					"172": "3221",
+					"3222": "132_A"
+				};
+				var routeSimilarity = stringSimilarity.findBestMatch(context.bus_route, busList);
+				request({
+					headers: {
+						"X-NCU-API-TOKEN": process.env.NCU_API_TOKEN
+					},
+					url: "https://api.cc.ncu.edu.tw/bus/v1/routes/" + busIdList[routeSimilarity.bestMatch.target] + "/estimate_times"}, function(error, response, body) {
+					const allBusStop = _.pluck(JSON.parse(body).BusDynInfo.BusInfo.Route.EstimateTime, "StopName");
+					var stopSimilarity = stringSimilarity.findBestMatch(context.bus_stop, allBusStop);
+					const estimateTimeResult = _.find(JSON.parse(body).BusDynInfo.BusInfo.Route.EstimateTime, function(stop) {
+						return stop.StopName === stopSimilarity.bestMatch.target;
+					});
+					const currentTime = moment();
+					const busComeTime = moment(moment().format('MMMM Do YYYY, ' + estimateTimeResult.comeTime + ':00'), 'MMMM Do YYYY, hh:mm:ss');
+					subtractTime = busComeTime.diff(currentTime, 'minutes', true);
+					context.bus_time = subtractTime.toFixed(0) + "分鐘";
+				});
+				delete context.missingRoute;
+				delete context.missingStop;
+			}
+
+			return resolve(context);
+	    });
+	},replyThanks({context, entities}) {
+		return new Promise(function(resolve, reject) {
+				var results = [
+						"不客氣～",
+						"有禮貌的小孩最乖了",
+						"這麼有禮貌，一定可以 All pass",
+						"不客氣，我給你87分不能再高了",
+						"能夠為您服務是我的榮幸",
+						"您太客氣了",
+						"不會不會",
+						"有禮貌的小孩好棒棒"
+					]
+		        context.gratitude = _.sample(results);
+			return resolve(context);
+	    });
+	},getRestaurantRate({context, entities}) {
+		return new Promise(function(resolve, reject) {
+				var allName = [];
+				request('http://www.ncufood.info/api/all_name', function (error, response, body) {
+					const entityRestaurantName = firstEntityValue(entities, 'restaurant_name');
+					if (entityRestaurantName) {
+						var finalName;
+						if (!error && response.statusCode == 200) {
+							_.each(JSON.parse(body), function(value) {
+								if (stringSimilarity.compareTwoStrings(value, entityRestaurantName) > 0) {
+									finalName = value;
+									return false;
+								}
+							});
+
+							if (finalName) {
+								context.restaurant_name = finalName;
+						        context.restaurant_url = "http://www.ncufood.info/" + finalName;
+								context.restaurant_url = encodeURI(context.restaurant_url);
+								request(encodeURI("http://www.ncufood.info/api/" + finalName), function(error, response, body) {
+									var result = JSON.parse(body)[0];
+									context.like_count = result.likes.like_count;
+									context.dislike_count = result.likes.dislike_count;
+
+									generics = true;
+									context.elements = [];
+									_.each(result.comments.reverse(), function(comment) {
+										context.elements.push({
+											"subtitle": comment.comment,
+											"title": comment.user.name,
+											"buttons": [{
+												"type": "web_url",
+												"url": context.restaurant_url,
+												"title": "查看更多"
+											}]
+										});
+									});
+
+									if(!context.elements.length)
+										context.noRate = true;
+								});
+								delete context.missingRestaurantName;
+							} else {
+								context.missingRestaurantName = true;
+								delete context.restaurant_url;
+							}
+						}
+					} else {
+						context.missingRestaurantName = true;
+						delete context.restaurant_url;
+					}
+				});
+			return resolve(context);
+	    });
+	},
 };
 
 const wit = new Wit({
@@ -140,6 +335,7 @@ const wit = new Wit({
 });
 
 function sendTextMessage(id, text) {
+	id = id.toString();
 	const body = JSON.stringify({
 		recipient: { id },
 		message: { text },
@@ -158,5 +354,74 @@ function sendTextMessage(id, text) {
 		return json;
 	});
 };
+
+
+function sendGenericMessage(id, url, title, subtitle) {
+	id = id.toString();
+	const body = JSON.stringify({
+		recipient: { id },
+		message: {
+			"attachment": {
+				"type": "template",
+				"payload": {
+					"template_type": "generic",
+					"elements": [{
+						"title": title,
+						"subtitle": subtitle,
+						"image_url": "http://www.ncufood.info/image/indexMetaImageNew.png",
+						"buttons": [{
+							"type": "web_url",
+							"url": url,
+							"title": "查看更多"
+						}]
+					}]
+				}
+			}
+		},
+	});
+	const qs = 'access_token=' + encodeURIComponent(token);
+	return fetch('https://graph.facebook.com/v2.6/me/messages?' + qs, {
+		method: 'POST',
+		headers: {'Content-Type': 'application/json'},
+		body,
+	})
+	.then(rsp => rsp.json())
+	.then(json => {
+		if (json.error && json.error.message) {
+			throw new Error(json.error.message);
+		}
+		return json;
+	});
+};
+
+function sendMultiGenericMessage(id, elements) {
+	id = id.toString();
+	const body = JSON.stringify({
+		recipient: { id },
+		message: {
+			"attachment": {
+				"type": "template",
+				"payload": {
+					"template_type": "generic",
+					"elements": elements
+				}
+			}
+		},
+	});
+	const qs = 'access_token=' + encodeURIComponent(token);
+	return fetch('https://graph.facebook.com/v2.6/me/messages?' + qs, {
+		method: 'POST',
+		headers: {'Content-Type': 'application/json'},
+		body,
+	})
+	.then(rsp => rsp.json())
+	.then(json => {
+		if (json.error && json.error.message) {
+			throw new Error(json.error.message);
+		}
+		return json;
+	});
+};
+
 
 server.listen(443);
