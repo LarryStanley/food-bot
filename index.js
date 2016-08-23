@@ -298,20 +298,21 @@ const actions = {
 
 									generics = true;
 									context.elements = [];
-									_.each(result.comments.reverse(), function(comment) {
-										context.elements.push({
-											"subtitle": comment.comment,
-											"title": comment.user.name,
-											"buttons": [{
-												"type": "web_url",
-												"url": context.restaurant_url,
-												"title": "查看更多"
-											}]
+									if (result.comments.length) {
+										_.each(result.comments.reverse(), function(comment) {
+											context.elements.push({
+												"subtitle": comment.comment,
+												"title": comment.user.name,
+												"buttons": [{
+													"type": "web_url",
+													"url": context.restaurant_url,
+													"title": "查看更多"
+												}]
+											});
 										});
-									});
-
-									if(!context.elements.length)
+									} else {
 										context.noRate = true;
+									}
 								});
 								delete context.missingRestaurantName;
 							} else {
