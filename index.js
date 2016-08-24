@@ -5,6 +5,7 @@ var fetch = require('node-fetch');
 var htmlparser = require("htmlparser2");
 var stringSimilarity = require('string-similarity');
 var moment = require('moment');
+var rp = require('request-promise');
 var _ = require('underscore');
 
 fs = require('fs');
@@ -171,7 +172,7 @@ const actions = {
 						var finalName;
 						if (!error && response.statusCode == 200) {
 							_.each(JSON.parse(body), function(value) {
-								if (stringSimilarity.compareTwoStrings(value, entityRestaurantName) > 0) {
+								if (stringSimilarity.compareTwoStrings(value, entityRestaurantName) > 0.5) {
 									finalName = value;
 									return false;
 								}
@@ -190,17 +191,19 @@ const actions = {
 								});
 								generic = true;
 								delete context.missingRestaurantName;
+								return resolve(context);
 							} else {
 								context.missingRestaurantName = true;
 								delete context.restaurant_url;
+								return resolve(context);
 							}
 						}
 					} else {
 						context.missingRestaurantName = true;
 						delete context.restaurant_url;
+						return resolve(context);
 					}
 				});
-			return resolve(context);
 	    });
 	},getWeather({context, entities}) {
 		return new Promise(function(resolve, reject) {
@@ -214,18 +217,23 @@ const actions = {
 		return new Promise(function(resolve, reject) {
 			const entitiesBusStop = firstEntityValue(entities, 'bus_stop');
 			const entitiesBusRoute = firstEntityValue(entities, 'bus_route');
+			console.log(entities);
 			if (entitiesBusRoute)
 				context.bus_route = entitiesBusRoute;
 			if (entitiesBusStop)
 				context.bus_stop = entitiesBusStop;
 
-			if (!entitiesBusStop) {
+			if (!context.bus_stop) {
 				context.missingStop = true;
 				delete context.bus_time;
-			} else if(!entitiesBusRoute) {
+				return resolve(context);
+			} else if(!context.bus_route) {
 				context.missingRoute = true;
 				delete context.bus_time;
+				return resolve(context);
 			} 
+
+
 
 			if (context.bus_stop && context.bus_route){
 				const busList = ["133", "132", "172", "132_A"];
@@ -235,12 +243,15 @@ const actions = {
 					"172": "3221",
 					"3222": "132_A"
 				};
+				console.log(context.bus_route);
 				var routeSimilarity = stringSimilarity.findBestMatch(context.bus_route, busList);
+				var url = "https://api.cc.ncu.edu.tw/bus/v1/routes/" + busIdList[stringSimilarity.findBestMatch(context.bus_route, busList).bestMatch.target] + "/estimate_times";
+				console.log(url);
 				request({
 					headers: {
 						"X-NCU-API-TOKEN": process.env.NCU_API_TOKEN
 					},
-					url: "https://api.cc.ncu.edu.tw/bus/v1/routes/" + busIdList[routeSimilarity.bestMatch.target] + "/estimate_times"}, function(error, response, body) {
+					url: url}, function(error, response, body) {
 					const allBusStop = _.pluck(JSON.parse(body).BusDynInfo.BusInfo.Route.EstimateTime, "StopName");
 					var stopSimilarity = stringSimilarity.findBestMatch(context.bus_stop, allBusStop);
 					const estimateTimeResult = _.find(JSON.parse(body).BusDynInfo.BusInfo.Route.EstimateTime, function(stop) {
@@ -250,12 +261,12 @@ const actions = {
 					const busComeTime = moment(moment().format('MMMM Do YYYY, ' + estimateTimeResult.comeTime + ':00'), 'MMMM Do YYYY, hh:mm:ss');
 					subtractTime = busComeTime.diff(currentTime, 'minutes', true);
 					context.bus_time = subtractTime.toFixed(0) + "分鐘";
-				});
-				delete context.missingRoute;
-				delete context.missingStop;
-			}
 
-			return resolve(context);
+					delete context.missingRoute;
+					delete context.missingStop;
+					return resolve(context);
+				});
+			}
 	    });
 	},replyThanks({context, entities}) {
 		return new Promise(function(resolve, reject) {
@@ -317,17 +328,73 @@ const actions = {
 									}
 								});
 								delete context.missingRestaurantName;
+								return resolve(context);
 							} else {
 								context.missingRestaurantName = true;
 								delete context.restaurant_url;
+								return resolve(context);
 							}
 						}
 					} else {
 						context.missingRestaurantName = true;
 						delete context.restaurant_url;
+						return resolve(context);
 					}
 				});
-			return resolve(context);
+	    });
+	}, getFoodType({context, entities}) {
+		return new Promise(function(resolve, reject) {
+			const foodType = ["飲料/點心", "宵夜", "早餐", "午晚餐"];
+			const foodList = {
+				"飲料/點心": "drink",
+				"宵夜":"midnight-snack", 
+				"早餐":"breakfast", 
+				"午晚餐": "dine"
+			};
+			const entityType = firstEntityValue(entities, "food_type");
+			typeSimilarity = stringSimilarity.findBestMatch(entityType, foodType);
+			if (typeSimilarity.bestMatch.rating) {
+				generics = true;
+				const url = "http://www.ncufood.info/api/" + foodList[typeSimilarity.bestMatch.target];
+				rp({
+					uri: url,
+					json:true
+				}).then(function(response) {
+					context.elements = [];
+					_.each(response, function(value, key) {
+						var restaurant_url = "http://www.ncufood.info/" + value.name;
+						restaurant_url = encodeURI(restaurant_url);
+						context.elements.push({
+							"subtitle": value.address,
+							"title": value.name,
+							"image_url": "http://www.ncufood.info/image/indexMetaImageNew.png",
+							"buttons": [{
+								"type": "web_url",
+								"url": restaurant_url,
+								"title": "查看更多"
+							}]
+						});
+					});
+
+					context.elements = context.elements.slice(0, 4);
+					context.elements.push({
+						"title": typeSimilarity.bestMatch.target,
+						"image_url": "http://www.ncufood.info/image/indexMetaImageNew.png",
+						"buttons": [{
+							"type": "web_url",
+							"url": "http://www.ncufood.info/" +  foodList[typeSimilarity.bestMatch.target],
+							"title": "查看更多" +  typeSimilarity.bestMatch.target + "的結果",
+						}]
+					});
+					context.result = true;
+					delete context.noResult;
+					return resolve(context);
+				});
+			} else {
+				context.noResult = true;
+				delete context.result;
+				return resolve(context);
+			}
 	    });
 	},
 };
