@@ -217,7 +217,6 @@ const actions = {
 		return new Promise(function(resolve, reject) {
 			const entitiesBusStop = firstEntityValue(entities, 'bus_stop');
 			const entitiesBusRoute = firstEntityValue(entities, 'bus_route');
-			console.log(entities);
 			if (entitiesBusRoute)
 				context.bus_route = entitiesBusRoute;
 			if (entitiesBusStop)
@@ -243,10 +242,8 @@ const actions = {
 					"172": "3221",
 					"3222": "132_A"
 				};
-				console.log(context.bus_route);
 				var routeSimilarity = stringSimilarity.findBestMatch(context.bus_route, busList);
 				var url = "https://api.cc.ncu.edu.tw/bus/v1/routes/" + busIdList[stringSimilarity.findBestMatch(context.bus_route, busList).bestMatch.target] + "/estimate_times";
-				console.log(url);
 				request({
 					headers: {
 						"X-NCU-API-TOKEN": process.env.NCU_API_TOKEN
