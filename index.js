@@ -23,7 +23,6 @@ try {
 	interactive = require('node-wit').interactive;
 }
 
-var token = process.env.PAGE_TOKEN;
 var server = restify.createServer({
 	certificate: fs.readFileSync('/home/stanley/bot.ncufood.info/bot.ncufood.info.crt'),
 	key: fs.readFileSync('/home/stanley/bot.ncufood.info/ca.key'),
@@ -71,17 +70,6 @@ server.post('/webhook/', function (req, res) {
 	}
 	res.send(200, "success");
 });
-
-const firstEntityValue = (entities, entity) => {
-	const val = entities && entities[entity] &&
-	Array.isArray(entities[entity]) &&
-	entities[entity].length > 0 &&
-	entities[entity][0].value;
-	if (!val) {
-		return null;
-	}
-	return typeof val === 'object' ? val.value : val;
-};
 
 const wit = new Wit({
 	accessToken: process.env.WIT_TOKEN,
