@@ -19,11 +19,11 @@ const firstEntityValue = (entities, entity) => {
 };
 
 exports.getWeather = function({context, entities}) {
+	console.log("weather");
 	return new Promise(function(resolve, reject) {
 		request('http://api.openweathermap.org/data/2.5/weather?lat=24.968129&lon=121.192645&units=metric&APPID=' + process.env.WEATHER_KEY, function(error, response, body) {
 			var result = JSON.parse(body);
-			if (context.temperature)
-				context.temperature = "\n攝氏" + result.main.temp ;
+			context.temperature = "\n攝氏" + result.main.temp ;
 			return resolve(context);
 		});
     });
