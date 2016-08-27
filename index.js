@@ -62,6 +62,8 @@ server.post('/webhook/', function (req, res) {
 				text, // the user's message
 				sessions[sessionId].context // the user's current session state
 			).then((context) => {
+				context.generic = false;
+				context.generics = false;
 				sessions[sessionId].context = context;
 			}).catch((err) => {
 				console.error('Oops! Got an error from Wit: ', err.stack || err);
