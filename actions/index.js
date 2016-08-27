@@ -78,6 +78,7 @@ exports.actions = {
 	},
 	sendGreetings: 		greeting.sendGreetings,
 	replyThanks: 		greeting.replyThanks,
+	replyInsult: 		greeting.replyInsult,
 	getMenu: 			food.getMenu,
 	getRestaurantRate: 	food.getRestaurantRate,
 	getFoodType: 		food.getFoodType,	
