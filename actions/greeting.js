@@ -64,3 +64,40 @@ exports.replyInsult = function({context, entities}) {
 		return resolve(context);
 	});
 }
+
+exports.replyAuthor = function({context, entities}) {
+	return new Promise(function(resolve, reject) {
+		context.elements = [];
+		context.elements.push({
+			"subtitle": "如果你想要參考我的原始碼，可以點選「原始碼」。\n 有任何問題，可以點選「聯絡作者」私訊作者，或是來信到 larrystanley@me.com，謝謝。",
+			"title": "我認為作者是個帥哥，所以我都稱他為帥哥。",
+			/*"image_url": "http://graph.facebook.com/100000165905522/picture?type=large",*/
+			"buttons": [{
+				"type": "web_url",
+				"url": "https://github.com/LarryStanley/food-bot",
+				"title": "原始碼"
+			},
+			{
+				"type": "web_url",
+				"url": "https://www.facebook.com/Ly.Stanley",
+				"title": "聯絡作者"
+			}]
+		});
+		context.generics = true;
+		context.result = "作者是個帥哥";
+		return resolve(context);
+	});
+}
+
+exports.replyGender = function({context, entities}) {
+	return new Promise(function(resolve, reject) {
+		var results = [
+			"你在這邊問我性別，肯定還沒脫魯",
+			"先別管我的性別了，你托魯了嗎？",
+			"我應該是男的",
+			"男，170，中壢，安安給虧嗎？"
+		]
+		context.result = _.sample(results);
+		return resolve(context);
+	});
+}

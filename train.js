@@ -31,7 +31,7 @@ ical.fromURL('https://calendar.google.com/calendar/ical/ncu.acad@gmail.com/publi
 
 function postData(value) {
 	var options = {
-		uri: 'https://api.wit.ai/entities/cal_event/values?v=20160526',
+		uri: 'https://api.wit.ai/entities/cal_event/values',
 		qs: {
 			access_token: process.env.WIT_TOKEN,
 		},
@@ -41,21 +41,31 @@ function postData(value) {
 		json: true,
 		method: "POST",
 		body: {
-			"value": value
+			"value" : value
 		}
 	};
 
-	rp(options)
-	.then(function (repos) {
+	if (!check(value)) {
+		rp(options)
+		.then(function (repos) {
+			index++;
+			if (index != allCalData.length)
+				postData(allCalData[index]);
+			console.log(repos);
+		})
+		.catch(function (err) {
+			index++;
+			if (index != allCalData.length)
+				postData(allCalData[index]);
+			console.log(err);
+		});
+	} else {
 		index++;
 		if (index != allCalData.length)
 			postData(allCalData[index]);
-		console.log(repos);
-	})
-	.catch(function (err) {
-		index++;
-		if (index != allCalData.length)
-			postData(allCalData[index]);
-		console.log(err);
-	});
+	}
+}
+
+function check(input) {
+  return /^[a-zA-Z0-9- ]*$/.test(input);
 }

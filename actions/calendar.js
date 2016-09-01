@@ -21,15 +21,21 @@ const firstEntityValue = (entities, entity) => {
 
 exports.getCalendar = function({context, entities}) {
 	return new Promise(function(resolve, reject) {
+		delete context.calResult;
 		ical.fromURL('https://calendar.google.com/calendar/ical/ncu.acad@gmail.com/public/basic.ics', {}, function(err, data) {
 			var entityEventName = firstEntityValue(entities, 'cal_event');
+			if (!entityEventName) {
+				context.notFound = true;
+				delete context.calResult;
+				return resolve(context);
+			}
 			var result = [];
 			var index = 0;
 			async.each(data, function(value, callback){
 				index++;
-				const similarity = stringSimilarity.compareTwoStrings(value.summary, firstEntityValue(entities, 'cal_event'));
+				const similarity = stringSimilarity.compareTwoStrings(value.summary, entityEventName);
 				const timeDiff = moment(value.start).diff(moment());
-				if (similarity > 0.2 && timeDiff > 0) {
+				if (similarity > 0 && timeDiff > 0) {
 					value.similarity = {
 						time: timeDiff,
 						text: stringSimilarity.compareTwoStrings(value.summary, firstEntityValue(entities, 'cal_event'))
@@ -38,6 +44,7 @@ exports.getCalendar = function({context, entities}) {
 				}
 				callback();
 			}, function(err) {
+				console.log(result);
 				if (result.length) {
 					result = _.min(result, function(value) {
 						return value.similarity.time;

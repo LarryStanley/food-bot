@@ -62,7 +62,10 @@ exports.getBusTime = function({context, entities}) {
 					const currentTime = moment();
 					const busComeTime = moment(moment().format('MMMM Do YYYY, ' + estimateTimeResult.comeTime + ':00'), 'MMMM Do YYYY, hh:mm:ss');
 					var subtractTime = busComeTime.diff(currentTime, 'minutes', true);
-					context.bus_time = subtractTime.toFixed(0) + "分鐘";
+					if (subtractTime.toFixed(0) > 0)
+						context.bus_time = subtractTime.toFixed(0) + "分鐘後會";
+					else
+						context.bus_time = "會在明天" + estimateTimeResult.comeTime;
 
 					delete context.missingRoute;
 					delete context.missingStop;
