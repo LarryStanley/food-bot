@@ -101,3 +101,11 @@ exports.replyGender = function({context, entities}) {
 		return resolve(context);
 	});
 }
+
+exports.replyFunction = function({context, entities}) {
+	return new Promise(function(resolve, reject) {
+		
+		context.result = "你可以問我：\n今天天氣如何？\n132多久會到警衛室呢？\n請問有小紅牛的菜單嗎？\n立橙的評價如何？";
+		return resolve(context);
+	});
+}
