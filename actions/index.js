@@ -82,6 +82,7 @@ exports.actions = {
 	replyAuthor: 		greeting.replyAuthor,
 	replyGender: 		greeting.replyGender,
 	replyFunction: 		greeting.replyFunction,
+	getStory: 			greeting.getStory,
 	getMenu: 			food.getMenu,
 	getRestaurantRate: 	food.getRestaurantRate,
 	getFoodType: 		food.getFoodType,	

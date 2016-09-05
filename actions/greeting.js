@@ -109,3 +109,34 @@ exports.replyFunction = function({context, entities}) {
 		return resolve(context);
 	});
 }
+
+exports.getStory = function({context, entites}) {
+	return new Promise(function(resolve, reject) {
+		const currentDate = moment().format("YYYY-MM-DD");
+		const twoWeeksDate = moment(moment().subtract(1.5, 'weeks')).format("YYYY-MM-DD");
+		const url = "https://graph.facebook.com/1514597625469099/posts?fields=actions,from,message,comments.limit(5).summary(true),likes.limit(0).summary(true)&since=" + twoWeeksDate + "&until=" + currentDate + "&limit=150&access_token=" + process.env.PAGE_TOKEN;
+		rp({
+			uri: url,
+			json: true
+		})
+			.then(function(fbResponse) {
+				fbResponse = _.sortBy(fbResponse.data, function(post) {
+					return post.likes.summary.total_count;
+				});
+				fbResponse = fbResponse.reverse().slice(0,4);
+				const result = _.sample(fbResponse);
+				context.generics = true;
+				context.elements = [{
+					"subtitle": result.message,
+					"title": "這是我最近在「靠北中央」看到的文章，相信你會有興趣",
+					"buttons": [{
+						"type": "web_url",
+						"url": "https://www.facebook.com/" + result.id,
+						"title": "查看原文"
+					}]
+				}];
+				context.result = "故事";
+				return resolve(context);
+			});
+	});
+}
