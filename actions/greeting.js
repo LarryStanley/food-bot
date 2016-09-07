@@ -128,7 +128,7 @@ exports.getStory = function({context, entites}) {
 				context.generics = true;
 				context.elements = [{
 					"subtitle": result.message,
-					"title": "這是我最近在「靠北中央」看到的文章，相信你會有興趣",
+					"title": "這是我最近在「靠北中央」看到的文章",
 					"buttons": [{
 						"type": "web_url",
 						"url": "https://www.facebook.com/" + result.id,

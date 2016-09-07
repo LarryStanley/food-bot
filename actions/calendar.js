@@ -31,11 +31,12 @@ exports.getCalendar = function({context, entities}) {
 			}
 			var result = [];
 			var index = 0;
+			console.log(entityEventName);
 			async.each(data, function(value, callback){
 				index++;
 				const similarity = stringSimilarity.compareTwoStrings(value.summary, entityEventName);
 				const timeDiff = moment(value.start).diff(moment());
-				if (similarity > 0 && timeDiff > 0) {
+				if (similarity > 0.2 && timeDiff > 0) {
 					value.similarity = {
 						time: timeDiff,
 						text: stringSimilarity.compareTwoStrings(value.summary, firstEntityValue(entities, 'cal_event'))
@@ -44,7 +45,6 @@ exports.getCalendar = function({context, entities}) {
 				}
 				callback();
 			}, function(err) {
-				console.log(result);
 				if (result.length) {
 					result = _.min(result, function(value) {
 						return value.similarity.time;
