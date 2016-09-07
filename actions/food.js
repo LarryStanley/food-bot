@@ -134,7 +134,7 @@ exports.getFoodType = function({context, entities}) {
 		const entityType = firstEntityValue(entities, "food_type");
 		typeSimilarity = stringSimilarity.findBestMatch(entityType, foodType);
 		if (typeSimilarity.bestMatch.rating) {
-			generics = true;
+			context.generics = true;
 			const url = "http://www.ncufood.info/api/" + foodList[typeSimilarity.bestMatch.target];
 			rp({
 				uri: url,

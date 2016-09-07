@@ -60,7 +60,7 @@ exports.replyInsult = function({context, entities}) {
 			"真的很抱歉，我才剛出生不久，智商有點低，招待不周",
 			"央大素質不意外"
 		]
-		context.reply = _.sample(results);
+		context.replyInsult = _.sample(results);
 		return resolve(context);
 	});
 }
@@ -123,7 +123,7 @@ exports.getStory = function({context, entites}) {
 				fbResponse = _.sortBy(fbResponse.data, function(post) {
 					return post.likes.summary.total_count;
 				});
-				fbResponse = fbResponse.reverse().slice(0,4);
+				fbResponse = fbResponse.reverse().slice(0,5);
 				const result = _.sample(fbResponse);
 				context.generics = true;
 				context.elements = [{
