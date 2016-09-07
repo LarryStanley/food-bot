@@ -54,9 +54,11 @@ exports.replyInsult = function({context, entities}) {
 		var results = [
 			"你這樣下修央大的水準對嗎？",
 			"靠北，我沒跟你收錢就不錯了",
-			"中央的校訓不是誠樸嗎？這樣罵髒話對嗎？",
+			"中央的校訓不是誠樸嗎？這樣罵髒話對嗎？幹",
 			"實在是很抱歉，如果有招待不周可以好好說嘛？",
-			"阿呦，不要因為騎不到小綠就罵髒話啊",
+			"阿呦，你髒話系？",
+			"你被騙繳系學會費嗎？",
+			"你該不會繳了系學會費了吧？我當初繳了兩千",
 			"真的很抱歉，我才剛出生不久，智商有點低，招待不周",
 			"央大素質不意外"
 		]
@@ -69,7 +71,7 @@ exports.replyAuthor = function({context, entities}) {
 	return new Promise(function(resolve, reject) {
 		context.elements = [];
 		context.elements.push({
-			"subtitle": "如果你想要參考我的原始碼，可以點選「原始碼」。\n 有任何問題，可以點選「聯絡作者」私訊作者，或是來信到 larrystanley@me.com，謝謝。",
+			"subtitle": "如果你想要參考我的原始碼，可以點選「原始碼」。\n 有任何問題，可以點選「聯絡作者」，或是來信到 larrystanley@me.com，謝謝。",
 			"title": "我認為作者是個帥哥，所以我都稱他為帥哥。",
 			/*"image_url": "http://graph.facebook.com/100000165905522/picture?type=large",*/
 			"buttons": [{
