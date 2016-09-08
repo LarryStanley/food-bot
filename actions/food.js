@@ -61,6 +61,66 @@ exports.getMenu = function({context, entities}) {
 	});
 }
 
+exports.getRandomFood = function({context, entities}) {
+	return new Promise(function(resolve, reject) {
+		const hour = moment().format('H')
+		var foodType = "midnight-snack";
+		var foodTypeChinese = "晚餐";
+		if (hour >= 16 && hour < 20){
+			foodType = "dine";
+			foodTypeChinese = "晚餐";
+		}
+		else if (hour < 11){
+			foodType = "breakfast";
+			foodTypeChinese = "早餐";
+		}
+		else if (hour >= 20){
+			foodType = "midnight-snack";
+			foodTypeChinese = "宵夜"
+		}else{
+			foodType = "dine";
+			foodTypeChinese = "午餐"
+		}
+
+		context.generics = true;
+		const url = "http://www.ncufood.info/api/" + foodType;
+		rp({
+			uri: url,
+			json:true
+		}).then(function(response) {
+			context.elements = [];
+			_.each(response, function(value, key) {
+				var restaurant_url = "http://www.ncufood.info/" + value.name;
+				restaurant_url = encodeURI(restaurant_url);
+				context.elements.push({
+					"subtitle": value.address,
+					"title": value.name,
+					"image_url": "http://www.ncufood.info/image/indexMetaImageNew.png",
+					"buttons": [{
+						"type": "web_url",
+						"url": restaurant_url,
+						"title": "查看更多"
+					}]
+				});
+			});
+
+			context.elements = _.sample(context.elements, 6);
+			context.elements.push({
+				"title": foodTypeChinese,
+				"image_url": "http://www.ncufood.info/image/indexMetaImageNew.png",
+				"buttons": [{
+					"type": "web_url",
+					"url": "http://www.ncufood.info/" +  foodType,
+					"title": "查看更多" +  foodTypeChinese + "的結果",
+				}]
+			});
+			context.randomFood = true;
+			delete context.noResult;
+			return resolve(context);
+		});
+	});
+}
+
 exports.getRestaurantRate = function({context, entities}) {
 	return new Promise(function(resolve, reject) {
 		var allName = [];
@@ -156,7 +216,7 @@ exports.getFoodType = function({context, entities}) {
 					});
 				});
 
-				context.elements = context.elements.slice(0, 4);
+				context.elements = _.sample(context.elements, 8);
 				context.elements.push({
 					"title": typeSimilarity.bestMatch.target,
 					"image_url": "http://www.ncufood.info/image/indexMetaImageNew.png",
